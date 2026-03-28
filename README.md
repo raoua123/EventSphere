@@ -1,12 +1,21 @@
-# MiniProjet2A-EventReservation
+#  EventSphere — Plateforme de réservation d'événements en Tunisie
 
-Application Web de Gestion de Réservations d'Événements  
-**Technologies:** Symfony 7 · JWT · Passkeys (WebAuthn) · PostgreSQL · Docker
+EventSphere est une application web moderne conçue pour dynamiser l'écosystème événementiel en Tunisie. Des hackathons aux masterclasses, la plateforme simplifie la découverte et la réservation de places via une interface fluide et intuitive.
 
 ---
 
-## Membres de l'équipe
-- Prénom NOM — FIA3-GL
+## Fonctionnalités Clés
+
+### Pour les Participants
+- **Découverte Intelligente** : Parcourez les événements avec photos, dates, lieux et compte à rebours des places.
+- **Filtrage Dynamique** : Filtrez instantanément par disponibilité, par semaine ou via la barre de recherche.
+- **Réservation Express** : Formulaire simplifié (Nom, Email, Téléphone) avec validation en temps réel.
+- **Notifications** : Alertes interactives pour confirmer le succès ou signaler une erreur de réservation.
+
+###  Pour les Administrateurs
+- **Gestion Complète (CRUD)** : Interface dédiée pour ajouter, modifier ou supprimer des événements.
+- **Tableau de Bord** : Statistiques sur le nombre total d'événements, les places restantes et la couverture géographique.
+- **Email Sandboxing** : Intégration avec **Mailpit** pour intercepter tous les emails de test sans envoi réel.
 
 ---
 
@@ -62,33 +71,36 @@ L'application sera disponible sur **https://localhost**
 
 ---
 
-## Structure des branches
 
-| Branche | Rôle |
-|---------|------|
-| `main` | Code stable et fonctionnel |
-| `dev` | Intégration et tests |
-| `feature/auth` | Authentification JWT + Passkeys |
-| `feature/events` | CRUD événements |
-| `feature/reservations` | Gestion des réservations |
+## Accès Administrateur
+
+```bash
+docker exec symfony_php bin/console doctrine:query:sql "UPDATE \"user\" SET roles = '[\"ROLE_ADMIN\"]' WHERE email = 'votre-email@exemple.com'"
+```
 
 ---
 
-## API Endpoints
+##Outils de Développement
 
-| Méthode | Route | Description | Auth |
-|---------|-------|-------------|------|
-| POST | `/api/auth/register/options` | Options WebAuthn inscription | Public |
-| POST | `/api/auth/register/verify` | Vérification inscription | Public |
-| POST | `/api/auth/login/options` | Options WebAuthn connexion | Public |
-| POST | `/api/auth/login/verify` | Vérification connexion → JWT | Public |
-| POST | `/api/token/refresh` | Rafraîchir le JWT | Public |
-| GET | `/api/auth/me` | Profil utilisateur | JWT |
-| GET | `/api/events` | Liste des événements | Public |
-| GET | `/api/events/{id}` | Détail événement | Public |
-| POST | `/api/events` | Créer un événement | Admin |
-| PUT | `/api/events/{id}` | Modifier un événement | Admin |
-| DELETE | `/api/events/{id}` | Supprimer un événement | Admin |
-| POST | `/api/reservations` | Créer une réservation | JWT |
-| GET | `/api/reservations` | Mes réservations | JWT |
-| GET | `/api/admin/reservations` | Toutes les réservations | Admin |
+Mailpit : Intercepte tous les emails envoyés (confirmations, alertes).
+Interface Web : http://localhost:8025
+
+---
+
+
+### Dépannage rapide
+
+
+Si les styles ne s'affichent pas ou si la base de données refuse la connexion :
+
+```bash
+# Nettoyage complet des volumes et relance
+docker-compose down -v
+docker-compose up -d
+
+# Forcer la compilation des assets
+docker exec symfony_php npm run build
+
+# Vider le cache Symfony
+docker exec symfony_php bin/console cache:clear
+```
