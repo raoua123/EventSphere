@@ -80,7 +80,7 @@ docker exec symfony_php bin/console doctrine:query:sql "UPDATE \"user\" SET role
 
 ---
 
-##Outils de Développement
+## Outils de Développement
 
 Mailpit : Intercepte tous les emails envoyés (confirmations, alertes).
 Interface Web : http://localhost:8025
