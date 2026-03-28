@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Event Reservation App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f4f6fb; color: #222; }
+    header { background: #1a1a2e; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.3rem; }
+    .auth-bar { display: flex; gap: 0.75rem; align-items: center; }
+    input[type=email] { padding: 0.4rem 0.75rem; border-radius: 6px; border: none; font-size: 0.9rem; }
+    button { padding: 0.4rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 500; }
+    #btn-register { background: #4f8ef7; color: #fff; }
+    #btn-login    { background: #27ae60; color: #fff; }
+    #btn-logout   { background: #e74c3c; color: #fff; }
+    #auth-status  { font-size: 0.85rem; min-width: 180px; }
+    main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    h2 { margin-bottom: 1rem; font-size: 1.4rem; }
+    .events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+    .card img { width: 100%; height: 140px; object-fit: cover; background: #dde; }
+    .card-body { padding: 1rem; }
+    .card-body h3 { font-size: 1rem; margin-bottom: 0.4rem; }
+    .card-body p  { font-size: 0.85rem; color: #555; margin-bottom: 0.3rem; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; margin-bottom: 0.6rem; }
+    .badge-ok  { background: #d4edda; color: #155724; }
+    .badge-low { background: #fff3cd; color: #856404; }
+    .badge-full{ background: #f8d7da; color: #721c24; }
+    .btn-reserve { width: 100%; margin-top: 0.5rem; background: #4f8ef7; color: #fff; padding: 0.5rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; }
+    .btn-reserve:disabled { background: #aaa; cursor: not-allowed; }
+    .loading { text-align: center; padding: 3rem; color: #888; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎟 Event Reservation</h1>
+  <div class="auth-bar">
+    <input type="email" id="email" placeholder="votre@email.com"/>
+    <button id="btn-register">S'inscrire (Passkey)</button>
+    <button id="btn-login">Se connecter</button>
+    <button id="btn-logout" style="display:none">Déconnexion</button>
+    <span id="auth-status"></span>
+  </div>
+</header>
+
+<main>
+  <h2>Événements à venir</h2>
+  <div class="events-grid" id="events-grid">
+    <p class="loading">Chargement des événements…</p>
+  </div>
+</main>
+
+<script src="/js/auth.js"></script>
+<script>
+  // Show/hide logout based on token
+  if (localStorage.getItem('jwt_token')) {
+    document.getElementById('btn-logout').style.display = 'inline-block';
+    document.getElementById('btn-register').style.display = 'none';
+    document.getElementById('btn-login').style.display = 'none';
+    document.getElementById('email').style.display = 'none';
+  }
+
+  // Load events
+  async function loadEvents() {
+    const res = await fetch('/api/events');
+    const events = await res.json();
+    const grid = document.getElementById('events-grid');
+
+    if (!events.length) {
+      grid.innerHTML = '<p>Aucun événement disponible.</p>';
+      return;
+    }
+
+    grid.innerHTML = events.map(ev => {
+      const seats = ev.availableSeats;
+      const badge = seats === 0
+        ? '<span class="badge badge-full">Complet</span>'
+        : seats <= 5
+          ? `<span class="badge badge-low">${seats} places restantes</span>`
+          : `<span class="badge badge-ok">${seats} places disponibles</span>`;
+
+      return `
+        <div class="card">
+          ${ev.image ? `<img src="${ev.image}" alt="${ev.title}"/>` : '<div style="height:140px;background:#e0e6ff;"></div>'}
+          <div class="card-body">
+            <h3>${ev.title}</h3>
+            <p>📅 ${ev.date}</p>
+            <p>📍 ${ev.location}</p>
+            ${badge}
+            <p style="font-size:.8rem;color:#666">${ev.description.slice(0,80)}…</p>
+            <button class="btn-reserve" onclick="reserve(${ev.id})" ${seats === 0 ? 'disabled' : ''}>
+              Réserver
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function reserve(eventId) {
+    const token = localStorage.getItem('jwt_token');
+    if (!token) { alert('Connectez-vous d\'abord avec votre Passkey.'); return; }
+
+    const name  = prompt('Votre nom complet:');
+    const email = prompt('Votre email:');
+    const phone = prompt('Votre téléphone:');
+    if (!name || !email || !phone) return;
+
+    const res = await authFetch('/api/reservations', {
+      method: 'POST',
+      body: JSON.stringify({ event_id: eventId, name, email, phone }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert('✅ ' + data.message);
+      loadEvents();
+    } else {
+      alert('❌ ' + (data.error || JSON.stringify(data.errors)));
+    }
+  }
+
+  loadEvents();
+</script>
+</body>
+</html>

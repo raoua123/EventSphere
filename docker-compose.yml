@@ -1,0 +1,74 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: symfony_php
+    environment:
+      - APP_ENV=dev
+      - APP_DEBUG=1
+      - DATABASE_URL=postgresql://user:raoua@database:5432/event_reservation?serverVersion=15&charset=utf8
+      - JWT_PASSPHRASE=raoua
+      - JWT_SECRET_KEY=/var/www/config/jwt/private.pem
+      - JWT_PUBLIC_KEY=/var/www/config/jwt/public.pem
+      - JWT_TOKEN_TTL=3600
+      - APP_DOMAIN=localhost
+      - APP_SECRET=e928e97261420f240b470d9d48d16021
+      - MAILER_DSN=smtp://mailpit:1025
+      - WEBAUTHN_RP_NAME=Event Reservation App
+    volumes:
+      - .:/var/www
+      - ./config/jwt:/var/www/config/jwt
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: symfony_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./public:/var/www/public:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - php
+    networks:
+      - app_network
+
+  database:
+    image: postgres:15-alpine
+    container_name: symfony_db
+    environment:
+      - POSTGRES_DB=event_reservation
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=raoua
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d event_reservation"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+    ports:
+      - "5432:5432"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: symfony_mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

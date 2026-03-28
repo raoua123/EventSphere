@@ -1,0 +1,45 @@
+security:
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+
+    providers:
+        app_user_provider:
+            entity:
+                class: App\Entity\User
+                property: email
+
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+
+        # Public passkey endpoints (Re-enabled security to allow sessions)
+        auth_api:
+            pattern: ^/api/auth/(register|login)
+            stateless: false # Set to false so Symfony can store the WebAuthn challenge in the session
+            security: true
+            # This firewall doesn't require a login, it's just to handle the session
+
+        # Main API protected by JWT
+        api:
+            pattern: ^/api
+            stateless: true
+            provider: app_user_provider
+            jwt: ~
+            # If you are using refresh tokens, they usually have their own firewall or check_path
+            # refresh_jwt:
+            #    check_path: /api/token/refresh
+
+    access_control:
+        # 1. Allow everyone to access the registration and login flows
+        - { path: ^/api/auth/(register|login), roles: PUBLIC_ACCESS }
+        - { path: ^/api/token/refresh,          roles: PUBLIC_ACCESS }
+        
+        # 2. Public Read-only access to events
+        - { path: ^/api/events$,                roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/events/\d+$,            roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/auth/verify-email, roles: PUBLIC_ACCESS }
+        # 3. All other /api requests require a valid JWT (ROLE_USER)
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+

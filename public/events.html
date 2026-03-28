@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EventSphere — Événements</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#09090f;--card:rgba(255,255,255,.04);--card-hover:rgba(255,255,255,.07);
+      --border:rgba(255,255,255,.08);--border-hover:rgba(124,109,250,.4);
+      --accent:#7c6dfa;--accent2:#a78bfa;--text:#e8e6ff;--muted:#8b87b0;
+      --error:#ff6b6b;--success:#4ade80;--warn:#fb923c;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);min-height:100vh}
+
+    .orb{position:fixed;border-radius:50%;filter:blur(100px);opacity:.15;pointer-events:none;z-index:0}
+    .orb-1{width:600px;height:600px;background:#6366f1;top:-200px;right:-100px}
+    .orb-2{width:400px;height:400px;background:#8b5cf6;bottom:-100px;left:-100px}
+
+    /* ── Header ── */
+    header{position:sticky;top:0;z-index:100;background:rgba(9,9,15,.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 clamp(16px,4vw,48px);display:flex;align-items:center;justify-content:space-between;height:64px}
+    .nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+    .nav-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:9px;display:flex;align-items:center;justify-content:center}
+    .nav-icon svg{width:18px;height:18px;fill:white}
+    .nav-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.3px;color:var(--text)}
+    .nav-right{display:flex;align-items:center;gap:12px}
+    .nav-email{font-size:13px;color:var(--muted)}
+    .nav-admin{font-size:11px;font-weight:700;letter-spacing:.5px;padding:4px 10px;background:rgba(124,109,250,.15);color:var(--accent2);border:1px solid rgba(124,109,250,.25);border-radius:20px;text-decoration:none;display:none}
+    .nav-admin.show{display:inline-block}
+    .btn-nav{padding:8px 18px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:9px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
+    .btn-nav:hover{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.3);color:var(--error)}
+
+    /* ── Hero ── */
+    .hero{position:relative;z-index:1;padding:64px clamp(16px,4vw,48px) 40px;text-align:center}
+    .hero-tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);background:rgba(124,109,250,.12);border:1px solid rgba(124,109,250,.2);padding:5px 14px;border-radius:20px;margin-bottom:20px}
+    .hero-title{font-family:'Syne',sans-serif;font-size:clamp(32px,5vw,64px);font-weight:800;line-height:1.05;letter-spacing:-2px;margin-bottom:16px}
+    .hero-title .gradient{background:linear-gradient(135deg,var(--accent),var(--accent2),#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hero-sub{font-size:17px;color:var(--muted);max-width:480px;margin:0 auto 32px;line-height:1.6}
+    .stats{display:inline-flex;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:48px}
+    .stat{padding:16px 32px;text-align:center;border-right:1px solid var(--border)}
+    .stat:last-child{border-right:none}
+    .stat-num{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .stat-label{font-size:11px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-top:2px}
+
+    /* ── View toggle ── */
+    .view-bar{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 clamp(16px,4vw,48px) 24px}
+    .view-btn{padding:9px 22px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
+    .view-btn.active{background:var(--accent);border-color:var(--accent);color:white;box-shadow:0 4px 14px rgba(124,109,250,.3)}
+
+    /* ── Filters (events view only) ── */
+    .filters{position:relative;z-index:1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 clamp(16px,4vw,48px) 24px}
+    .filter-label{font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.5px}
+    .filter-btn{padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap}
+    .filter-btn:hover,.filter-btn.active{background:var(--accent);border-color:var(--accent);color:white;box-shadow:0 4px 12px rgba(124,109,250,.3)}
+    .search-wrap{margin-left:auto;position:relative}
+    .search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted);pointer-events:none}
+    #searchInput{padding:8px 12px 8px 36px;background:var(--card);border:1px solid var(--border);border-radius:20px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;width:220px;transition:all .2s}
+    #searchInput:focus{border-color:var(--accent);background:rgba(124,109,250,.08);width:280px}
+    #searchInput::placeholder{color:rgba(139,135,176,.5)}
+
+    /* ── Grid ── */
+    .grid-wrap{position:relative;z-index:1;padding:0 clamp(16px,4vw,48px) 80px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:24px}
+
+    /* ── Event Card ── */
+    .ev-card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:all .35s cubic-bezier(.22,1,.36,1);animation:cardIn .5s cubic-bezier(.22,1,.36,1) both}
+    .ev-card:hover{background:var(--card-hover);border-color:var(--border-hover);transform:translateY(-6px);box-shadow:0 24px 48px rgba(0,0,0,.5)}
+    .ev-img{width:100%;height:200px;object-fit:cover;display:block;transition:transform .5s cubic-bezier(.22,1,.36,1)}
+    .ev-card:hover .ev-img{transform:scale(1.03)}
+    .ev-body{padding:22px}
+    .ev-meta-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .ev-date-badge{font-size:11px;font-weight:600;letter-spacing:.5px;color:var(--accent2);background:rgba(124,109,250,.12);padding:4px 10px;border-radius:20px}
+    .ev-seats{font-size:12px;color:var(--muted)}
+    .ev-seats.low{color:var(--warn)}
+    .ev-seats.full{color:var(--error)}
+    .ev-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;letter-spacing:-.3px;margin-bottom:7px;line-height:1.3}
+    .ev-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .ev-location{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:16px}
+    .ev-location svg{width:13px;height:13px;color:var(--accent);flex-shrink:0}
+    .ev-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .ev-capacity{display:flex;flex-direction:column;gap:4px}
+    .capacity-bar{width:90px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+    .capacity-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s}
+    .capacity-fill.warn{background:linear-gradient(90deg,#fb923c,#f59e0b)}
+    .capacity-fill.danger{background:linear-gradient(90deg,#ef4444,#f97316)}
+    .capacity-text{font-size:11px;color:var(--muted)}
+    .btn-reserve{padding:9px 18px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(124,109,250,.3);white-space:nowrap}
+    .btn-reserve:hover{transform:scale(1.04);box-shadow:0 6px 20px rgba(124,109,250,.45)}
+    .btn-reserve:disabled{background:rgba(255,255,255,.06);color:var(--muted);cursor:not-allowed;box-shadow:none;transform:none}
+    .tag-full{padding:9px 18px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--error);border-radius:10px;font-size:12px;font-weight:600}
+
+    /* Admin actions on card */
+    .admin-row{display:none;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+    body.is-admin .admin-row{display:flex}
+    .btn-edit{padding:6px 14px;background:rgba(124,109,250,.1);border:1px solid rgba(124,109,250,.2);color:var(--accent2);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s}
+    .btn-edit:hover{background:rgba(124,109,250,.2)}
+    .btn-del{padding:6px 14px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);color:var(--error);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s}
+    .btn-del:hover{background:rgba(255,107,107,.18)}
+
+    /* FAB for admin add */
+    .fab{position:fixed;bottom:32px;right:32px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(124,109,250,.45);z-index:300;transition:all .3s}
+    body.is-admin .fab{display:flex}
+    .fab:hover{transform:scale(1.1) rotate(90deg);box-shadow:0 12px 32px rgba(124,109,250,.6)}
+    .fab svg{width:24px;height:24px;stroke:white;fill:none;stroke-width:3}
+
+    /* ── Reservation card (my reservations view) ── */
+    .res-card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;transition:border-color .2s}
+    .res-card:hover{border-color:var(--border-hover)}
+    .res-img{width:100%;height:160px;object-fit:cover;display:block}
+    .res-body{padding:20px}
+    .res-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:6px;letter-spacing:-.3px}
+    .res-meta{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px}
+    .res-meta strong{color:var(--text)}
+    .btn-cancel-res{padding:8px 16px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);color:var(--error);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+    .btn-cancel-res:hover{background:rgba(255,107,107,.18)}
+
+    /* ── State messages ── */
+    .state{text-align:center;padding:80px 20px;color:var(--muted)}
+    .state svg{width:48px;height:48px;opacity:.2;margin:0 auto 16px;display:block}
+    .state p{font-size:15px}
+
+    /* ── Reserve Modal ── */
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+    .overlay.open{display:flex}
+    .modal{background:#131325;border:1px solid var(--border);border-radius:24px;padding:36px;width:100%;max-width:460px;margin:16px;position:relative;overflow:hidden;animation:modalIn .3s cubic-bezier(.22,1,.36,1)}
+    .modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(124,109,250,.5),transparent)}
+    .modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.3px;margin-bottom:4px}
+    .modal-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+    .modal-field{margin-bottom:16px}
+    .modal-field label{display:block;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+    .modal-field input{width:100%;padding:12px 14px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:all .2s}
+    .modal-field input:focus{border-color:var(--accent);background:rgba(124,109,250,.08);box-shadow:0 0 0 3px rgba(124,109,250,.15)}
+    .modal-field input::placeholder{color:rgba(139,135,176,.4)}
+    .modal-msg{margin-top:14px;padding:11px 14px;border-radius:9px;font-size:13px;display:none}
+    .modal-msg.show{display:block}
+    .modal-msg.error{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.2);color:var(--error)}
+    .modal-msg.success{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);color:var(--success)}
+    .modal-actions{display:flex;gap:10px;margin-top:20px}
+    .btn-confirm{flex:1;padding:13px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 6px 20px rgba(99,102,241,.35)}
+    .btn-confirm.loading{opacity:.7;pointer-events:none}
+    .btn-cancel-m{padding:13px 20px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);border-radius:11px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:all .2s}
+    .btn-cancel-m:hover{background:rgba(255,255,255,.08)}
+
+    /* Admin event form modal */
+    .admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:400;align-items:center;justify-content:center;backdrop-filter:blur(10px)}
+    .admin-overlay.open{display:flex}
+    .admin-modal{background:#111120;border:1px solid var(--border);border-radius:24px;padding:36px;width:100%;max-width:480px;margin:16px;animation:modalIn .3s cubic-bezier(.22,1,.36,1)}
+    .admin-modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.3px;margin-bottom:6px}
+    .admin-modal-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group.full{grid-column:1/-1}
+    .form-group label{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+    .form-group input,.form-group textarea{padding:11px 13px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:all .2s}
+    .form-group input:focus,.form-group textarea:focus{border-color:var(--accent);background:rgba(124,109,250,.08)}
+    .form-group input::placeholder,.form-group textarea::placeholder{color:rgba(139,135,176,.4)}
+    .form-group textarea{resize:vertical;min-height:80px}
+    .admin-form-actions{display:flex;gap:10px;margin-top:20px}
+    .admin-msg{margin-top:12px;padding:10px 14px;border-radius:9px;font-size:13px;display:none}
+    .admin-msg.show{display:block}
+    .admin-msg.error{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.2);color:var(--error)}
+    .admin-msg.success{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);color:var(--success)}
+
+    @keyframes cardIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+    @media(max-width:640px){
+      .stats{flex-direction:column}
+      .stat{border-right:none;border-bottom:1px solid var(--border);padding:12px 24px}
+      .stat:last-child{border-bottom:none}
+      .form-grid{grid-template-columns:1fr}
+      .search-wrap{margin-left:0;width:100%}
+      #searchInput,#searchInput:focus{width:100%}
+    }
+  </style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- Header -->
+<header>
+  <a class="nav-brand" href="/events.html">
+    <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div>
+    <span class="nav-name">EventSphere</span>
+  </a>
+  <div class="nav-right">
+    <span class="nav-email" id="navEmail"></span>
+    <span class="nav-admin" id="adminLink" >Admin</span>
+    <button class="btn-nav" id="btnLogout">Déconnexion</button>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-tag">Plateforme de réservation</div>
+  <h1 class="hero-title">Événements à<br><span class="gradient">ne pas manquer</span></h1>
+  <p class="hero-sub">Les meilleures conférences, hackathons et masterclasses en Tunisie. Réservez votre place en quelques secondes.</p>
+  <div class="stats" id="statsBar" style="display:none">
+    <div class="stat"><div class="stat-num" id="statEvents">—</div><div class="stat-label">Événements</div></div>
+    <div class="stat"><div class="stat-num" id="statPlaces">—</div><div class="stat-label">Places disponibles</div></div>
+    <div class="stat"><div class="stat-num" id="statCities">—</div><div class="stat-label">Villes</div></div>
+  </div>
+</section>
+
+<!-- View toggle -->
+<div class="view-bar">
+  <button class="view-btn active" id="btnViewEvents">Événements</button>
+  <button class="view-btn" id="btnViewReservations">Mes réservations</button>
+</div>
+
+<!-- Filters (shown only in events view) -->
+<div class="filters" id="filtersBar">
+  <span class="filter-label">Filtrer :</span>
+  <button class="filter-btn active" data-filter="all">Tous</button>
+  <button class="filter-btn" data-filter="available">Disponibles</button>
+  <button class="filter-btn" data-filter="soon">Cette semaine</button>
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="searchInput" placeholder="Rechercher un événement...">
+  </div>
+</div>
+
+<!-- Grid area -->
+<div class="grid-wrap">
+  <div class="state" id="loadingState">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    <p>Chargement...</p>
+  </div>
+  <div class="grid" id="eventsGrid" style="display:none"></div>
+  <div class="grid" id="reservationsGrid" style="display:none"></div>
+  <div class="state" id="emptyState" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+    <p id="emptyMsg">Aucun résultat.</p>
+  </div>
+</div>
+
+<!-- FAB (admin add event) -->
+<button class="fab" id="fabAdd" title="Ajouter un événement">
+  <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<!-- Reserve Modal -->
+<div class="overlay" id="reserveOverlay">
+  <div class="modal">
+    <p class="modal-title" id="modalTitle">Réserver</p>
+    <p class="modal-sub" id="modalSub">Confirmez votre place pour cet événement.</p>
+    <div class="modal-field"><label>Nom complet</label><input type="text" id="rName" placeholder="Votre nom" autocomplete="name"></div>
+    <div class="modal-field"><label>Email de contact</label><input type="email" id="rEmail" placeholder="vous@exemple.com" autocomplete="email"></div>
+    <div class="modal-field"><label>Téléphone</label><input type="tel" id="rPhone" placeholder="+216 XX XXX XXX" autocomplete="tel"></div>
+    <div class="modal-msg" id="modalMsg"></div>
+    <div class="modal-actions">
+      <button class="btn-confirm" id="btnConfirm">Confirmer la réservation</button>
+      <button class="btn-cancel-m" id="btnCancelReserve">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Event Form Modal -->
+<div class="admin-overlay" id="adminOverlay">
+  <div class="admin-modal">
+    <p class="admin-modal-title" id="adminModalTitle">Ajouter un événement</p>
+    <p class="admin-modal-sub">L'événement sera immédiatement visible sur le site.</p>
+    <form id="adminForm" autocomplete="off">
+      <input type="hidden" id="adminEditId">
+      <div class="form-grid">
+        <div class="form-group full"><label>Titre</label><input type="text" id="fTitle" placeholder="Nom de l'événement" required></div>
+        <div class="form-group full"><label>Description</label><textarea id="fDesc" placeholder="Décrivez l'événement..." required></textarea></div>
+        <div class="form-group"><label>Date</label><input type="datetime-local" id="fDate" required></div>
+        <div class="form-group"><label>Nombre de places</label><input type="number" id="fSeats" placeholder="200" min="1" required></div>
+        <div class="form-group full"><label>Lieu</label><input type="text" id="fLocation" placeholder="Palais des Congrès, Tunis" required></div>
+        <div class="form-group full"><label>URL image (optionnel)</label><input type="url" id="fImage" placeholder="https://images.unsplash.com/..."></div>
+      </div>
+      <div class="admin-msg" id="adminMsg"></div>
+      <div class="admin-form-actions">
+        <button type="submit" class="btn-confirm" id="adminSubmit">Publier l'événement</button>
+        <button type="button" class="btn-cancel-m" id="btnCancelAdmin">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+import { authFetch, isLoggedIn, logout } from './js/auth.js?v=2';
+
+// ── Guard ──
+if (!isLoggedIn()) window.location.replace('/login.html');
+
+// ── State ──
+let allEvents = [];
+let currentFilter = 'all';
+let selectedEventId = null;
+let currentUser = null;
+let currentView = 'events'; // 'events' | 'reservations'
+
+// ── DOM refs ──
+const eventsGrid      = document.getElementById('eventsGrid');
+const reservationsGrid= document.getElementById('reservationsGrid');
+const loadingState    = document.getElementById('loadingState');
+const emptyState      = document.getElementById('emptyState');
+const emptyMsg        = document.getElementById('emptyMsg');
+const filtersBar      = document.getElementById('filtersBar');
+const statsBar        = document.getElementById('statsBar');
+
+// ── Boot ──
+async function boot() {
+  const r = await authFetch('/api/auth/me');
+  if (!r.ok) return logout();
+  currentUser = await r.json();
+
+  document.getElementById('navEmail').textContent = currentUser.email;
+  if (currentUser.roles?.includes('ROLE_ADMIN')) {
+    document.body.classList.add('is-admin');
+    document.getElementById('adminLink').classList.add('show');
+  }
+
+  await loadEvents();
+}
+
+// ── Load events from API ──
+async function loadEvents() {
+  showLoading();
+  try {
+    const r = await fetch('/api/events');
+    allEvents = await r.json();
+    updateStats();
+    renderEvents();
+  } catch {
+    showEmpty('Erreur de chargement des événements.');
+  }
+}
+
+// ── Render events grid ──
+function renderEvents() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const now = Date.now();
+  const oneWeek = 7 * 24 * 3600 * 1000;
+
+  const filtered = allEvents.filter(ev => {
+    if (currentFilter === 'available' && ev.availableSeats <= 0) return false;
+    if (currentFilter === 'soon') {
+      const d = new Date(ev.date).getTime();
+      if (d < now || d > now + oneWeek) return false;
+    }
+    if (search && !ev.title.toLowerCase().includes(search) && !ev.location?.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  eventsGrid.innerHTML = '';
+
+  if (!filtered.length) {
+    showEmpty('Aucun événement ne correspond à votre recherche.');
+    eventsGrid.style.display = 'none';
+    return;
+  }
+
+  hideEmpty();
+  eventsGrid.style.display = 'grid';
+  loadingState.style.display = 'none';
+
+  filtered.forEach((ev, i) => {
+    const available = ev.availableSeats > 0;
+    const pct = Math.round(((ev.seats - ev.availableSeats) / ev.seats) * 100);
+    const isLow = ev.availableSeats > 0 && ev.availableSeats <= 10;
+    const isFull = ev.availableSeats <= 0;
+    const dateStr = new Date(ev.date).toLocaleDateString('fr-TN', { day:'2-digit', month:'short', year:'numeric' });
+    const fillClass = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : '';
+
+    const card = document.createElement('div');
+    card.className = 'ev-card';
+    card.style.animationDelay = `${i * 0.055}s`;
+    card.innerHTML = `
+      ${ev.image
+        ? `<img class="ev-img" src="${ev.image}" alt="${ev.title}" loading="lazy">`
+        : `<div style="width:100%;height:200px;background:linear-gradient(135deg,#1a1a2e,#0f0f1c);display:flex;align-items:center;justify-content:center"><svg width="40" height="40" opacity=".2" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg></div>`}
+      <div class="ev-body">
+        <div class="ev-meta-top">
+          <span class="ev-date-badge">${dateStr}</span>
+          <span class="ev-seats ${isFull ? 'full' : isLow ? 'low' : ''}">
+            ${isFull ? 'Complet' : isLow ? `${ev.availableSeats} place${ev.availableSeats > 1 ? 's' : ''} restante${ev.availableSeats > 1 ? 's' : ''}` : `${ev.availableSeats} places`}
+          </span>
+        </div>
+        <h3 class="ev-title">${ev.title}</h3>
+        <p class="ev-desc">${ev.description}</p>
+        <div class="ev-location">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          ${ev.location}
+        </div>
+        <div class="ev-footer">
+          <div class="ev-capacity">
+            <div class="capacity-bar"><div class="capacity-fill ${fillClass}" style="width:${pct}%"></div></div>
+            <span class="capacity-text">${pct}% réservé</span>
+          </div>
+          ${available
+            ? `<button class="btn-reserve" data-id="${ev.id}" data-title="${ev.title}">Réserver</button>`
+            : `<span class="tag-full">Complet</span>`}
+        </div>
+        <div class="admin-row">
+          <button class="btn-edit" data-id="${ev.id}">Modifier</button>
+          <button class="btn-del" data-id="${ev.id}">Supprimer</button>
+        </div>
+      </div>`;
+    eventsGrid.appendChild(card);
+  });
+
+  // Reserve buttons
+  eventsGrid.querySelectorAll('.btn-reserve').forEach(btn => {
+    btn.addEventListener('click', () => openReserveModal(btn.dataset.id, btn.dataset.title));
+  });
+  // Admin edit/delete
+  eventsGrid.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', () => openAdminEdit(parseInt(btn.dataset.id)));
+  });
+  eventsGrid.querySelectorAll('.btn-del').forEach(btn => {
+    btn.addEventListener('click', () => deleteEvent(parseInt(btn.dataset.id)));
+  });
+}
+
+// ── Load reservations ──
+async function loadReservations() {
+  showLoading();
+  reservationsGrid.style.display = 'none';
+
+  try {
+    const r = await authFetch('/api/reservations');
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+
+    loadingState.style.display = 'none';
+
+    if (!data.length) {
+      showEmpty('Vous n\'avez aucune réservation pour le moment.');
+      return;
+    }
+
+    hideEmpty();
+    reservationsGrid.style.display = 'grid';
+    reservationsGrid.innerHTML = '';
+
+    data.forEach((res, i) => {
+      const card = document.createElement('div');
+      card.className = 'res-card';
+      card.style.animationDelay = `${i * 0.055}s`;
+      card.innerHTML = `
+        ${res.event.image
+          ? `<img class="res-img" src="${res.event.image}" alt="${res.event.title}" loading="lazy">`
+          : `<div style="width:100%;height:160px;background:linear-gradient(135deg,#1a1a2e,#0f0f1c)"></div>`}
+        <div class="res-body">
+          <h3 class="res-title">${res.event.title}</h3>
+          <div class="res-meta">
+            <strong>Date</strong> ${res.event.date}<br>
+            <strong>Lieu</strong> ${res.event.location}<br>
+            <strong>Réservé le</strong> ${res.createdAt}
+          </div>
+          <button class="btn-cancel-res" data-id="${res.id}">Annuler la réservation</button>
+        </div>`;
+      reservationsGrid.appendChild(card);
+    });
+
+    reservationsGrid.querySelectorAll('.btn-cancel-res').forEach(btn => {
+      btn.addEventListener('click', () => cancelReservation(parseInt(btn.dataset.id)));
+    });
+
+  } catch {
+    showEmpty('Erreur lors du chargement des réservations.');
+  }
+}
+
+// ── Cancel reservation ──
+async function cancelReservation(id) {
+  if (!confirm('Annuler cette réservation ?')) return;
+  const r = await authFetch(`/api/reservations/${id}`, { method: 'DELETE' });
+  if (r.ok) loadReservations();
+  else alert('Erreur lors de l\'annulation.');
+}
+
+// ── Stats ──
+function updateStats() {
+  const places = allEvents.reduce((s, e) => s + (e.availableSeats || 0), 0);
+  const cities  = new Set(allEvents.map(e => e.location?.split(',').pop()?.trim())).size;
+  document.getElementById('statEvents').textContent = allEvents.length;
+  document.getElementById('statPlaces').textContent = places.toLocaleString();
+  document.getElementById('statCities').textContent = cities;
+  statsBar.style.display = 'inline-flex';
+}
+
+// ── View switching ──
+document.getElementById('btnViewEvents').addEventListener('click', () => {
+  currentView = 'events';
+  document.getElementById('btnViewEvents').classList.add('active');
+  document.getElementById('btnViewReservations').classList.remove('active');
+  filtersBar.style.display = '';
+  reservationsGrid.style.display = 'none';
+  renderEvents();
+});
+
+document.getElementById('btnViewReservations').addEventListener('click', () => {
+  currentView = 'reservations';
+  document.getElementById('btnViewReservations').classList.add('active');
+  document.getElementById('btnViewEvents').classList.remove('active');
+  filtersBar.style.display = 'none';
+  eventsGrid.style.display = 'none';
+  loadReservations();
+});
+
+// ── Filters ──
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderEvents();
+  });
+});
+document.getElementById('searchInput').addEventListener('input', renderEvents);
+
+// ── Reserve modal ──
+function openReserveModal(id, title) {
+  selectedEventId = id;
+  document.getElementById('modalTitle').textContent = `Réserver : ${title}`;
+  document.getElementById('modalSub').textContent = 'Remplissez vos informations pour confirmer votre place.';
+  document.getElementById('rName').value = '';
+  document.getElementById('rEmail').value = currentUser?.email || '';
+  document.getElementById('rPhone').value = '';
+  document.getElementById('modalMsg').className = 'modal-msg';
+  document.getElementById('reserveOverlay').classList.add('open');
+  document.getElementById('rName').focus();
+}
+
+document.getElementById('btnCancelReserve').addEventListener('click', () => {
+  document.getElementById('reserveOverlay').classList.remove('open');
+});
+document.getElementById('reserveOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) document.getElementById('reserveOverlay').classList.remove('open');
+});
+
+document.getElementById('btnConfirm').addEventListener('click', async () => {
+  const name  = document.getElementById('rName').value.trim();
+  const email = document.getElementById('rEmail').value.trim();
+  const phone = document.getElementById('rPhone').value.trim();
+  const msgEl = document.getElementById('modalMsg');
+
+  if (!name || !email || !phone) {
+    msgEl.textContent = 'Tous les champs sont obligatoires.';
+    msgEl.className = 'modal-msg error show';
+    return;
+  }
+
+  const btn = document.getElementById('btnConfirm');
+  btn.textContent = 'Confirmation...';
+  btn.classList.add('loading');
+
+  const r = await authFetch('/api/reservations', {
+    method: 'POST',
+    body: JSON.stringify({ event_id: selectedEventId, name, email, phone }),
+  });
+  const data = await r.json();
+
+  btn.textContent = 'Confirmer la réservation';
+  btn.classList.remove('loading');
+
+  if (r.ok) {
+    msgEl.textContent = 'Réservation confirmée ! Un email de confirmation vous a été envoyé.';
+    msgEl.className = 'modal-msg success show';
+    setTimeout(() => {
+      document.getElementById('reserveOverlay').classList.remove('open');
+      loadEvents();
+    }, 2000);
+  } else {
+    msgEl.textContent = data.error || 'Erreur lors de la réservation.';
+    msgEl.className = 'modal-msg error show';
+  }
+});
+
+// ── Admin: add/edit modal ──
+document.getElementById('fabAdd').addEventListener('click', () => openAdminModal());
+document.getElementById('btnCancelAdmin').addEventListener('click', () => {
+  document.getElementById('adminOverlay').classList.remove('open');
+});
+document.getElementById('adminOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) document.getElementById('adminOverlay').classList.remove('open');
+});
+
+function openAdminModal(ev = null) {
+  document.getElementById('adminEditId').value = ev?.id || '';
+  document.getElementById('adminModalTitle').textContent = ev ? 'Modifier l\'événement' : 'Ajouter un événement';
+  document.getElementById('adminSubmit').textContent = ev ? 'Enregistrer' : 'Publier l\'événement';
+  document.getElementById('fTitle').value    = ev?.title || '';
+  document.getElementById('fDesc').value     = ev?.description || '';
+  document.getElementById('fDate').value     = ev?.date ? ev.date.replace(' ', 'T') : '';
+  document.getElementById('fSeats').value    = ev?.seats || '';
+  document.getElementById('fLocation').value = ev?.location || '';
+  document.getElementById('fImage').value    = ev?.image || '';
+  document.getElementById('adminMsg').className = 'admin-msg';
+  document.getElementById('adminOverlay').classList.add('open');
+  document.getElementById('fTitle').focus();
+}
+
+function openAdminEdit(id) {
+  const ev = allEvents.find(e => e.id === id);
+  if (ev) openAdminModal(ev);
+}
+
+document.getElementById('adminForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const id  = document.getElementById('adminEditId').value;
+  const btn = document.getElementById('adminSubmit');
+  const msgEl = document.getElementById('adminMsg');
+
+  btn.textContent = 'Enregistrement...';
+  btn.classList.add('loading');
+
+  const body = {
+    title:       document.getElementById('fTitle').value.trim(),
+    description: document.getElementById('fDesc').value.trim(),
+    date:        document.getElementById('fDate').value,
+    seats:       parseInt(document.getElementById('fSeats').value),
+    location:    document.getElementById('fLocation').value.trim(),
+    image:       document.getElementById('fImage').value.trim() || null,
+  };
+
+  const r = await authFetch(id ? `/api/events/${id}` : '/api/events', {
+    method: id ? 'PUT' : 'POST',
+    body: JSON.stringify(body),
+  });
+  const data = await r.json();
+
+  btn.textContent = id ? 'Enregistrer' : 'Publier l\'événement';
+  btn.classList.remove('loading');
+
+  if (r.ok) {
+    msgEl.textContent = id ? 'Événement modifié.' : 'Événement publié.';
+    msgEl.className = 'admin-msg success show';
+    setTimeout(() => {
+      document.getElementById('adminOverlay').classList.remove('open');
+      loadEvents();
+    }, 1200);
+  } else {
+    const err = data.errors ? Object.values(data.errors).join(' | ') : (data.error || 'Erreur');
+    msgEl.textContent = err;
+    msgEl.className = 'admin-msg error show';
+  }
+});
+
+// ── Admin: delete event ──
+async function deleteEvent(id) {
+  if (!confirm('Supprimer cet événement ? Cette action est irréversible.')) return;
+  const r = await authFetch(`/api/events/${id}`, { method: 'DELETE' });
+  if (r.ok) loadEvents();
+  else alert('Erreur lors de la suppression.');
+}
+
+// ── Helpers ──
+function showLoading() {
+  loadingState.style.display = 'block';
+  eventsGrid.style.display = 'none';
+  reservationsGrid.style.display = 'none';
+  emptyState.style.display = 'none';
+}
+
+function showEmpty(msg) {
+  loadingState.style.display = 'none';
+  emptyMsg.textContent = msg;
+  emptyState.style.display = 'block';
+}
+
+function hideEmpty() {
+  emptyState.style.display = 'none';
+}
+
+// ── Keyboard ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('reserveOverlay').classList.remove('open');
+    document.getElementById('adminOverlay').classList.remove('open');
+  }
+});
+
+document.getElementById('btnLogout').addEventListener('click', logout);
+
+boot();
+</script>
+</body>
+</html>
