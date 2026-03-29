@@ -1,54 +1,55 @@
-name: CI
+name: PHPUnit Tests
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+on: [push, pull_request]
 
 jobs:
-  build:
+  phpunit:
     runs-on: ubuntu-latest
+    
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15-alpine
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: eventsphere_test
+          POSTGRES_DB: event_reservation_test
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, pdo, pdo_pgsql, openssl, json
-          tools: composer:2.9.5
-
-      - name: Clear Composer Cache
-        run: composer clear-cache
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_pgsql
+          coverage: none
 
       - name: Install Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs
+        run: |
+          composer install --no-interaction --prefer-dist
+          # Ensure the PHP 8.4 fix is applied
+          composer require "doctrine/instantiator:^2.1" --dev --ignore-platform-reqs
 
-      - name: Create JWT directory
-        run: mkdir -p config/jwt
+      - name: Configure Test Environment
+        run: |
+          echo "DATABASE_URL=postgresql://user:password@127.0.0.1:5432/event_reservation_test?serverVersion=15&charset=utf8" >> .env.test
+          echo "APP_ENV=test" >> .env.test
+          echo "CORS_ALLOW_ORIGIN=^https?://localhost(:[0-9]+)?$" >> .env.test
+          echo "DEFAULT_URI=http://localhost" >> .env.test
 
-      - name: Run Doctrine Migrations
-        env:
-          DATABASE_URL: "pgsql://postgres:postgres@127.0.0.1:5432/eventsphere_test"
-        run: php -d error_reporting=E_ALL & ~E_USER_DEPRECATED vendor/bin/simple-phpunit --testdox
+      - name: Build Database Schema
+        # We use the --dump-sql trick here too in case schema:create crashes on GH
+        run: |
+          php bin/console doctrine:schema:create --env=test --dump-sql > schema.sql
+          PGPASSWORD=password psql -h 127.0.0.1 -U user -d event_reservation_test -f schema.sql
+
       - name: Run Tests
-        env:
-          DATABASE_URL: "pgsql://postgres:postgres@127.0.0.1:5432/eventsphere_test"
-        run: php vendor/bin/simple-phpunit --testdox
+        run: vendor/bin/simple-phpunit --testdox
