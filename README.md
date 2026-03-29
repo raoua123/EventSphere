@@ -86,7 +86,32 @@ Mailpit : Intercepte tous les emails envoyés (confirmations, alertes).
 Interface Web : http://localhost:8025
 
 ---
+## Tests Automatisés
 
+Le projet utilise **PHPUnit** via le **Symfony PHPUnit Bridge**. En raison de l'utilisation de **PHP 8.4**, une procédure spécifique est nécessaire pour synchroniser la base de données de test sans erreurs de syntaxe.
+
+### Préparation de la base de données de test
+Exécutez ces commandes pour créer une base isolée (`_test`) et injecter le schéma manuellement :
+
+```bash
+# Créer la base de données de test
+docker exec -it symfony_php php bin/console doctrine:database:create --env=test
+
+# Générer le schéma SQL et l'injecter directement (évite les crashs de syntaxe PHP 8.4)
+docker exec -it symfony_php php bin/console doctrine:schema:create --env=test --dump-sql > schema_setup.sql
+docker exec -i symfony_db psql -U user -d event_reservation_test < schema_setup.sql
+Use code with caution.
+```
+
+---
+
+
+### Lancer les tests
+Exécutez la suite de tests avec un affichage détaillé :
+
+```bash
+docker exec -it -e APP_ENV=test symfony_php vendor/bin/simple-phpunit --testdox
+```
 
 ### Dépannage rapide
 
