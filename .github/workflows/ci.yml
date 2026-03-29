@@ -35,18 +35,9 @@ jobs:
       - name: Install Dependencies
         run: |
           composer install --no-interaction --prefer-dist
-          # Ensure the PHP 8.4 fix is applied
           composer require "doctrine/instantiator:^2.1" --dev --ignore-platform-reqs
 
-      - name: Configure Test Environment
-        run: |
-          echo "DATABASE_URL=postgresql://user:password@127.0.0.1:5432/event_reservation_test?serverVersion=15&charset=utf8" >> .env.test
-          echo "APP_ENV=test" >> .env.test
-          echo "CORS_ALLOW_ORIGIN=^https?://localhost(:[0-9]+)?$" >> .env.test
-          echo "DEFAULT_URI=http://localhost" >> .env.test
-
       - name: Build Database Schema
-        # We use the --dump-sql trick here too in case schema:create crashes on GH
         run: |
           php bin/console doctrine:schema:create --env=test --dump-sql > schema.sql
           PGPASSWORD=password psql -h 127.0.0.1 -U user -d event_reservation_test -f schema.sql
