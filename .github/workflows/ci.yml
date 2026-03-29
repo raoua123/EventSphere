@@ -39,8 +39,10 @@ jobs:
 
       - name: Build Database Schema
         run: |
-          php bin/console doctrine:schema:create --env=test --dump-sql > schema.sql
+          # Use 127.0.0.1 for GitHub Services
+          DATABASE_URL="postgresql://user:password@127.0.0.1:5432/event_reservation_test?serverVersion=15" php bin/console doctrine:schema:create --env=test --dump-sql > schema.sql
           PGPASSWORD=password psql -h 127.0.0.1 -U user -d event_reservation_test -f schema.sql
 
       - name: Run Tests
-        run: vendor/bin/simple-phpunit --testdox
+        # Pass the DB URL again here to be absolutely sure
+        run: DATABASE_URL="postgresql://user:password@127.0.0.1:5432/event_reservation_test?serverVersion=15" vendor/bin/simple-phpunit --testdox
