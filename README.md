@@ -100,7 +100,6 @@ docker exec -it symfony_php php bin/console doctrine:database:create --env=test
 # Générer le schéma SQL et l'injecter directement (évite les crashs de syntaxe PHP 8.4)
 docker exec -it symfony_php php bin/console doctrine:schema:create --env=test --dump-sql > schema_setup.sql
 docker exec -i symfony_db psql -U user -d event_reservation_test < schema_setup.sql
-Use code with caution.
 ```
 
 ---
