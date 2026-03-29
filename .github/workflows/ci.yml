@@ -2,68 +2,54 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_DB: event_reservation_test
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: secret
-        ports: ['5432:5432']
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: eventsphere_test
+        ports:
+          - 5432:5432
         options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DATABASE_URL: postgresql://user:secret@localhost:5432/event_reservation_test?serverVersion=15&charset=utf8
-      JWT_PASSPHRASE: test_passphrase
-      JWT_TOKEN_TTL: 3600
-      APP_ENV: test
-      APP_SECRET: testsecretkey32charslong12345678
-      MAILER_DSN: null://null
-      APP_DOMAIN: localhost
-      WEBAUTHN_RP_NAME: "EventSphere Test"
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
-      # Checkout code
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      # Setup PHP 8.4
-      - uses: shivammathur/setup-php@v2
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo, pdo_pgsql, openssl, json, mbstring
-          coverage: none
+          extensions: mbstring, pdo, pdo_pgsql, openssl, json
+          tools: composer:2.9.5
 
-      # Optional: clear composer cache to avoid old versions
-      - name: Clear Composer cache
+      - name: Clear Composer Cache
         run: composer clear-cache
 
-      # Install dependencies freshly, ignore platform requirements for safety
-      - name: Install dependencies
+      - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs
 
-      # Generate JWT keys
-      - name: Generate JWT keys
-        run: |
-          mkdir -p config/jwt
-          openssl genpkey -out config/jwt/private.pem -algorithm rsa -pkeyopt rsa_keygen_bits:2048 -pass pass:${{ env.JWT_PASSPHRASE }}
-          openssl pkey -in config/jwt/private.pem -passin pass:${{ env.JWT_PASSPHRASE }} -out config/jwt/public.pem -pubout
+      - name: Create JWT directory
+        run: mkdir -p config/jwt
 
-      # Run database migrations
-      - name: Run migrations
+      - name: Run Doctrine Migrations
+        env:
+          DATABASE_URL: "pgsql://postgres:postgres@127.0.0.1:5432/eventsphere_test"
         run: php bin/console doctrine:migrations:migrate --no-interaction --env=test
 
-      # Run PHPUnit tests
-      - name: Run tests
-        run: php bin/phpunit --testdox
+      - name: Run Tests
+        env:
+          DATABASE_URL: "pgsql://postgres:postgres@127.0.0.1:5432/eventsphere_test"
+        run: php vendor/bin/phpunit --testdox
