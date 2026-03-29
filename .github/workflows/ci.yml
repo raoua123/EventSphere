@@ -25,6 +25,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 1. Setup PHP 8.4 with required Postgres extensions
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -32,24 +33,34 @@ jobs:
           extensions: mbstring, xml, ctype, iconv, intl, pdo_pgsql
           coverage: none
 
+      # 2. Install dependencies (including the PHP 8.4 fix for Instantiator)
       - name: Install Dependencies
         run: |
           composer install --no-interaction --prefer-dist
           composer require "doctrine/instantiator:^2.1" --dev --ignore-platform-reqs
 
+      # 3. Generate JWT keys (private/public) for the test environment
       - name: Create JWT keys
         run: |
           mkdir -p config/jwt
           openssl genrsa -out config/jwt/private.pem 2048
           openssl rsa -in config/jwt/private.pem -pubout -out config/jwt/public.pem
 
+      # 4. Build the database schema using the SQL dump trick to avoid PHP crashes
       - name: Build Database Schema
         run: |
           DATABASE_URL="postgresql://user:password@127.0.0.1:5432/event_reservation_test?serverVersion=15" php bin/console doctrine:schema:create --env=test --dump-sql > schema.sql
           PGPASSWORD=password psql -h 127.0.0.1 -U user -d event_reservation_test -f schema.sql
 
+      # 5. Run the tests with all required environment variables
       - name: Run Tests
         env:
           DATABASE_URL: "postgresql://user:password@127.0.0.1:5432/event_reservation_test?serverVersion=15"
+          JWT_SECRET_KEY: "%kernel.project_dir%/config/jwt/private.pem"
+          JWT_PUBLIC_KEY: "%kernel.project_dir%/config/jwt/public.pem"
           JWT_PASSPHRASE: "raoua"
+          JWT_TOKEN_TTL: "3600"
+          CORS_ALLOW_ORIGIN: "^https?://localhost(:[0-9]+)?$"
+          DEFAULT_URI: "http://localhost"
+          APP_ENV: test
         run: vendor/bin/simple-phpunit --testdox
