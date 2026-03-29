@@ -1,19 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit
-    backupGlobals="false"
-    colors="true"
-    bootstrap="vendor/autoload.php"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de"
+         backupGlobals="false"
+         colors="true"
+         bootstrap="vendor/autoload.php"
 >
     <php>
+        <ini name="display_errors" value="1" />
+        <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
+        <server name="SHELL_VERBOSITY" value="-1" />
         <server name="KERNEL_CLASS" value="App\Kernel" />
+        <server name="SYMFONY_DEPRECATIONS_HELPER" value="disabled" />
+        
         <env name="DEFAULT_URI" value="http://localhost" />
-        <env name="APP_ENV" value="test"/>
         <env name="CORS_ALLOW_ORIGIN" value="^https?://localhost(:[0-9]+)?$" />
-        <env name="DATABASE_URL" value="postgresql://user:raoua@database:5432/event_reservation_test?serverVersion=15&amp;charset=utf8" />
-        <ini name="error_reporting" value="-1 &amp; ~E_USER_DEPRECATED"/>
+             The workflow below will override this value. -->
+        <env name="DATABASE_URL" value="postgresql://user:password@127.0.0.1:5432/event_reservation_test?serverVersion=15&amp;charset=utf8" />
     </php>
 
     <testsuites>
