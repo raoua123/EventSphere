@@ -52,4 +52,4 @@ jobs:
       - name: Run Tests
         env:
           DATABASE_URL: "pgsql://postgres:postgres@127.0.0.1:5432/eventsphere_test"
-        run: php vendor/bin/phpunit --testdox
+        run: php vendor/bin/simple-phpunit --testdox
